@@ -63,13 +63,16 @@ def handle_dialog(res, req):
         }
         return
 
+    first_name = sessionStorage[user_id]['first_name']
+    name = first_name.title() if first_name else ''
+
     if sessionStorage[user_id]['guessing_country']:
         country_answer = req['request']['original_utterance'].lower()
         correct_country = sessionStorage[user_id]['country'].lower()
         if country_answer == correct_country:
             sessionStorage[user_id]['guessing_country'] = False
             res['response']['text'] = \
-                f'Правильно! Это {correct_country.title()}. Сыграем еще?'
+                f'{name}, правильно! Это {correct_country.title()}. Сыграем еще?'
             last_city = sessionStorage[user_id].get('last_city', '')
             res['response']['buttons'] = [
                 {
@@ -83,7 +86,7 @@ def handle_dialog(res, req):
             add_help_button(res)
         else:
             res['response']['text'] = \
-                f'Неправильно! Попробуй еще раз. В какой стране {sessionStorage[user_id]["last_city"].title()}?'
+                f'{name}, неправильно! Попробуй еще раз. В какой стране {sessionStorage[user_id]["last_city"].title()}?'
             res['response']['buttons'] = [
                 {'title': 'Россия', 'hide': True},
                 {'title': 'США', 'hide': True},
@@ -93,7 +96,7 @@ def handle_dialog(res, req):
         return
 
     if 'на карте' in req['request']['original_utterance'].lower():
-        res['response']['text'] = 'Сыграем еще?'
+        res['response']['text'] = f'{name}, сыграем еще?'
         res['response']['buttons'] = [
             {'title': 'Да', 'hide': True},
             {'title': 'Нет', 'hide': True}
@@ -104,7 +107,7 @@ def handle_dialog(res, req):
     if is_help(req):
         current_city = sessionStorage[user_id]['city']
         res['response']['text'] = \
-            'Я показываю фотографию города, а ты должен угадать его название. Выбирай из кнопок или пиши название города.'
+            f'{name}, я показываю фотографию города, а ты должен угадать его название. Выбирай из кнопок или пиши название города.'
         if current_city is not None:
             res['response']['card'] = {
                 'type': 'BigImage',
@@ -141,7 +144,7 @@ def handle_dialog(res, req):
                          f'Угадай, что это за город!',
                 'image_id': image_id
             }
-            res['response']['text'] = 'Угадай город!'
+            res['response']['text'] = f'{name}, угадай город!'
             res['response']['buttons'] = [
                 {'title': c.title(), 'hide': True} for c in cities
             ]
@@ -157,7 +160,7 @@ def handle_dialog(res, req):
             sessionStorage[user_id]['guessing_country'] = True
             sessionStorage[user_id]['country'] = country
             res['response']['text'] = \
-                f'Правильно! Это {current_city.title()}. А в какой стране он находится?'
+                f'{name}, правильно! Это {current_city.title()}. А в какой стране он находится?'
             res['response']['buttons'] = [
                 {'title': 'Россия', 'hide': True},
                 {'title': 'США', 'hide': True},
@@ -166,7 +169,7 @@ def handle_dialog(res, req):
             add_help_button(res)
         elif city is not None:
             res['response']['text'] = \
-                'Неправильно! Попробуй еще раз.'
+                f'{name}, неправильно! Попробуй еще раз.'
             res['response']['buttons'] = [
                 {'title': c.title(), 'hide': True} for c in cities
             ]
@@ -182,17 +185,17 @@ def handle_dialog(res, req):
                     'title': 'Угадай, что это за город!',
                     'image_id': image_id
                 }
-                res['response']['text'] = 'Угадай город!'
+                res['response']['text'] = f'{name}, угадай город!'
                 res['response']['buttons'] = [
                     {'title': c.title(), 'hide': True} for c in cities
                 ]
                 add_help_button(res)
             elif req['request']['original_utterance'].lower() in ['нет', 'не', 'хватит', 'стоп']:
-                res['response']['text'] = 'До встречи!'
+                res['response']['text'] = f'{name}, до встречи!'
                 res['response']['end_session'] = True
             else:
                 res['response']['text'] = \
-                    'Я не поняла. Сыграем еще?'
+                    f'{name}, я не поняла. Сыграем еще?'
                 res['response']['buttons'] = [
                     {'title': 'Да', 'hide': True},
                     {'title': 'Нет', 'hide': True}
