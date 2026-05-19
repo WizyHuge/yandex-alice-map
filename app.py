@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 import logging
 import random
+from geo import get_geo_info
 
 app = Flask(__name__)
 
@@ -45,7 +46,9 @@ def handle_dialog(res, req):
             'first_name': None,
             'city': None,
             'image_id': None,
-            'last_city': None
+            'last_city': None,
+            'guessing_country': False,
+            'country': None
         }
 
     if req['session']['new']:
@@ -54,8 +57,39 @@ def handle_dialog(res, req):
             'first_name': None,
             'city': None,
             'image_id': None,
-            'last_city': None
+            'last_city': None,
+            'guessing_country': False,
+            'country': None
         }
+        return
+
+    if sessionStorage[user_id]['guessing_country']:
+        country_answer = req['request']['original_utterance'].lower()
+        correct_country = sessionStorage[user_id]['country'].lower()
+        if country_answer == correct_country:
+            sessionStorage[user_id]['guessing_country'] = False
+            res['response']['text'] = \
+                f'Правильно! Это {correct_country.title()}. Сыграем еще?'
+            last_city = sessionStorage[user_id].get('last_city', '')
+            res['response']['buttons'] = [
+                {
+                    'title': last_city.title() + ' на карте',
+                    'url': 'https://yandex.ru/maps/?mode=search&text=' + last_city.title(),
+                    'hide': False
+                },
+                {'title': 'Да', 'hide': True},
+                {'title': 'Нет', 'hide': True}
+            ]
+            add_help_button(res)
+        else:
+            res['response']['text'] = \
+                f'Неправильно! Попробуй еще раз. В какой стране {sessionStorage[user_id]["last_city"].title()}?'
+            res['response']['buttons'] = [
+                {'title': 'Россия', 'hide': True},
+                {'title': 'США', 'hide': True},
+                {'title': 'Франция', 'hide': True}
+            ]
+            add_help_button(res)
         return
 
     if 'на карте' in req['request']['original_utterance'].lower():
@@ -117,18 +151,17 @@ def handle_dialog(res, req):
         current_city = sessionStorage[user_id]['city']
 
         if city is not None and city == current_city:
-            res['response']['text'] = \
-                f'Правильно! Это {current_city.title()}. Сыграем еще?'
+            country = get_geo_info(current_city, 'country')
             sessionStorage[user_id]['last_city'] = current_city
             sessionStorage[user_id]['city'] = None
+            sessionStorage[user_id]['guessing_country'] = True
+            sessionStorage[user_id]['country'] = country
+            res['response']['text'] = \
+                f'Правильно! Это {current_city.title()}. А в какой стране он находится?'
             res['response']['buttons'] = [
-                {
-                    'title': current_city.title() + ' на карте',
-                    'url': 'https://yandex.ru/maps/?mode=search&text=' + current_city.title(),
-                    'hide': False
-                },
-                {'title': 'Да', 'hide': True},
-                {'title': 'Нет', 'hide': True}
+                {'title': 'Россия', 'hide': True},
+                {'title': 'США', 'hide': True},
+                {'title': 'Франция', 'hide': True}
             ]
             add_help_button(res)
         elif city is not None:
