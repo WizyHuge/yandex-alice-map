@@ -2,25 +2,7 @@ import requests
 import math
 
 
-def get_coordinates(city_name):
-    try:
-        url = "https://geocode-maps.yandex.ru/1.x/"
-        params = {
-            "apikey": "8013b162-6b42-4997-9691-77b7074026e0",
-            'geocode': city_name,
-            'format': 'json'
-        }
-        response = requests.get(url, params)
-        json = response.json()
-        coordinates_str = json['response']['GeoObjectCollection'][
-            'featureMember'][0]['GeoObject']['Point']['pos']
-        long, lat = map(float, coordinates_str.split())
-        return long, lat
-    except Exception as e:
-        return e
-
-
-def get_country(city_name):
+def get_geo_info(city_name, type_info):
     try:
         url = "https://geocode-maps.yandex.ru/1.x/"
         params = {
@@ -29,9 +11,15 @@ def get_country(city_name):
             'format': 'json'
         }
         data = requests.get(url, params).json()
-        return data['response']['GeoObjectCollection'][
-            'featureMember'][0]['GeoObject']['metaDataProperty'][
-            'GeocoderMetaData']['AddressDetails']['Country']['CountryName']
+        if type_info == 'country':
+            return data['response']['GeoObjectCollection'][
+                'featureMember'][0]['GeoObject']['metaDataProperty'][
+                'GeocoderMetaData']['AddressDetails']['Country']['CountryName']
+        elif type_info == 'coordinates':
+            coordinates_str = data['response']['GeoObjectCollection'][
+                'featureMember'][0]['GeoObject']['Point']['pos']
+            long, lat = map(float, coordinates_str.split())
+            return long, lat
     except Exception as e:
         return e
 
