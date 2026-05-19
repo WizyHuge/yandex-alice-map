@@ -18,6 +18,10 @@ cities = {
 sessionStorage = {}
 
 
+def add_help_button(res):
+    res['response']['buttons'].append({'title': 'Помощь', 'hide': True})
+
+
 @app.route('/post', methods=['POST'])
 def main():
     logging.info('Request: %r', request.json)
@@ -40,8 +44,32 @@ def handle_dialog(res, req):
         res['response']['text'] = 'Привет! Назови свое имя!'
         sessionStorage[user_id] = {
             'first_name': None,
-            'city': None
+            'city': None,
+            'image_id': None
         }
+        return
+
+    if is_help(req):
+        current_city = sessionStorage[user_id]['city']
+        res['response']['text'] = \
+            'Я показываю фотографию города, а ты должен угадать его название. Выбирай из кнопок или пиши название города.'
+        if current_city is not None:
+            res['response']['card'] = {
+                'type': 'BigImage',
+                'title': 'Правила: я показываю фото города, а ты угадываешь. '
+                         'Угадай, что это за город!',
+                'image_id': sessionStorage[user_id]['image_id']
+            }
+            res['response']['buttons'] = [
+                {'title': c.title(), 'hide': True} for c in cities
+            ]
+            add_help_button(res)
+        elif sessionStorage[user_id]['first_name'] is not None:
+            res['response']['buttons'] = [
+                {'title': 'Да', 'hide': True},
+                {'title': 'Нет', 'hide': True}
+            ]
+            add_help_button(res)
         return
 
     if sessionStorage[user_id]['first_name'] is None:
@@ -52,20 +80,20 @@ def handle_dialog(res, req):
         else:
             sessionStorage[user_id]['first_name'] = first_name
             city = random.choice(list(cities.keys()))
+            image_id = random.choice(cities[city])
             sessionStorage[user_id]['city'] = city
+            sessionStorage[user_id]['image_id'] = image_id
             res['response']['card'] = {
                 'type': 'BigImage',
                 'title': f'Приятно познакомиться, {first_name.title()}. '
                          f'Угадай, что это за город!',
-                'image_id': random.choice(cities[city])
+                'image_id': image_id
             }
             res['response']['text'] = 'Угадай город!'
             res['response']['buttons'] = [
-                {
-                    'title': c.title(),
-                    'hide': True
-                } for c in cities
+                {'title': c.title(), 'hide': True} for c in cities
             ]
+            add_help_button(res)
     else:
         city = get_city(req)
         current_city = sessionStorage[user_id]['city']
@@ -78,34 +106,32 @@ def handle_dialog(res, req):
                 {'title': 'Да', 'hide': True},
                 {'title': 'Нет', 'hide': True}
             ]
+            add_help_button(res)
         elif city is not None:
             res['response']['text'] = \
                 'Неправильно! Попробуй еще раз.'
             res['response']['buttons'] = [
-                {
-                    'title': c.title(),
-                    'hide': True
-                } for c in cities
+                {'title': c.title(), 'hide': True} for c in cities
             ]
+            add_help_button(res)
         else:
             if req['request']['original_utterance'].lower() in ['да', 'давай', 'конечно', 'хочу']:
                 city = random.choice(list(cities.keys()))
+                image_id = random.choice(cities[city])
                 sessionStorage[user_id]['city'] = city
+                sessionStorage[user_id]['image_id'] = image_id
                 res['response']['card'] = {
                     'type': 'BigImage',
                     'title': 'Угадай, что это за город!',
-                    'image_id': random.choice(cities[city])
+                    'image_id': image_id
                 }
                 res['response']['text'] = 'Угадай город!'
                 res['response']['buttons'] = [
-                    {
-                        'title': c.title(),
-                        'hide': True
-                    } for c in cities
+                    {'title': c.title(), 'hide': True} for c in cities
                 ]
+                add_help_button(res)
             elif req['request']['original_utterance'].lower() in ['нет', 'не', 'хватит', 'стоп']:
-                res['response']['text'] = \
-                    'До встречи!'
+                res['response']['text'] = 'До встречи!'
                 res['response']['end_session'] = True
             else:
                 res['response']['text'] = \
@@ -114,6 +140,12 @@ def handle_dialog(res, req):
                     {'title': 'Да', 'hide': True},
                     {'title': 'Нет', 'hide': True}
                 ]
+                add_help_button(res)
+
+
+def is_help(req):
+    text = req['request']['original_utterance'].lower()
+    return text in ['помощь', 'помоги', 'помогите', 'что делать', 'как играть', 'правила']
 
 
 def get_city(req):
